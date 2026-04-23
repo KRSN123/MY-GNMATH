@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mini Game Hub</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background: #111;
+        color: white;
+    }
+    button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    canvas {
+        background: black;
+        margin-top: 20px;
+        border: 2px solid white;
+    }
+</style>
+</head>
+<body>
+<h1>🎮 Mini Game Hub</h1>
+<div id="menu">
+    <button onclick="startSnake()">Play Snake</button>
+    <button onclick="startTicTacToe()">Play Tic Tac Toe</button>
+</div>
+<canvas id="gameCanvas" width="400" height="400"></canvas>
+
+<script>
+let canvas = document.getElementById("gameCanvas");
+let ctx = canvas.getContext("2d");
+let gameInterval;
+
+/* ---------------- MENU ---------------- */
+function showMenu() {
+    clearInterval(gameInterval);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById("menu").style.display = "block";
+    canvas.onclick = null;
+}
+
+/* ---------------- SNAKE GAME ---------------- */
+let snake, direction, food, score;
+
+function startSnake() {
+    document.getElementById("menu").style.display = "none";
+    snake = [{x: 200, y: 200}];
+    direction = "RIGHT";
+    food = randomFood();
+    score = 0;
+
+    document.onkeydown = e => {
+        if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+        else if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+        else if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+        else if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+    };
+
+    gameInterval = setInterval(updateSnake, 100);
+}
+
+function updateSnake() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let head = {...snake[0]};
+    if (direction === "UP") head.y -= 20;
+    if (direction === "DOWN") head.y += 20;
+    if (direction === "LEFT") head.x -= 20;
+    if (direction === "RIGHT") head.x += 20;
+
+    if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height ||
+        snake.some(seg => seg.x === head.x && seg.y === head.y)) {
+        gameOverSnake();
+        return;
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+        score++;
+        food = randomFood();
+    } else {
+        snake.pop();
+    }
+
+    ctx.fillStyle = "lime";
+    snake.forEach(seg => ctx.fillRect(seg.x, seg.y, 20, 20));
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(food.x, food.y, 20, 20);
+
+    ctx.fillStyle = "white";
+    ctx.font = "16px Arial";
+    ctx.fillText("Score: " + score, 10, 20);
+}
+
+function gameOverSnake() {
+    clearInterval(gameInterval);
+    ctx.fillStyle = "white";
+    ctx.font = "24px Arial";
+    ctx.fillText("Game Over! Score: " + score, 100, 180);
+    setTimeout(showMenu, 1500);
+}
+
+function randomFood() {
+    return {
+        x: Math.floor(Math.random() * (canvas.width / 20)) * 20,
+        y: Math.floor(Math.random() * (canvas.height / 20)) * 20
+    };
+}
+
+/* ---------------- TIC TAC TOE ---------------- */
+let board, currentPlayer;
+
+function startTicTacToe() {
+    document.getElementById("menu").style.display = "none";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    board = Array(9).fill(null);
+    currentPlayer = "X";
+    canvas.onclick = handleTicClick;
+    drawTicTacToe();
+}
+
+function drawTicTacToe() {
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(133, 0); ctx.lineTo(133, 400);
+    ctx.moveTo(266, 0); ctx.lineTo(266, 400);
+    ctx.moveTo(0, 133); ctx.lineTo(400, 133);
+    ctx.moveTo(0, 266); ctx.lineTo(400, 266);
+    ctx.stroke();
+
+    ctx.font = "80px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i < 9; i++) {
+        if (board[i]) {
+            let x = (i % 3) * 133 + 66;
+            let y = Math.floor(i / 3) * 133 + 66;
+            ctx.fillText(board[i], x, y);
+        }
+    }
+}
+
+function handleTicClick(e) {
+    let rect = canvas.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    let col = Math.floor(x / 133);
+    let row = Math.floor(y / 133);
+    let index = row * 3 + col;
+
+    if (!board[index]) {
+        board[index] = currentPlayer;
+        if (checkWinner()) {
+            endTicTacToe(currentPlayer + " wins!");
+        } else if (board.every(cell => cell)) {
+            endTicTacToe("Draw!");
+        } else {
+            currentPlayer = currentPlayer === "X" ? "O" : "X";
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawTicTacToe();
+    }
+}
+
+function checkWinner() {
+    const wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+    ];
+    return wins.some(([a,b,c]) => board[a] && board[a] === board[b] && board[a] === board[c]);
+}
+
+function endTicTacToe(message) {
+    canvas.onclick = null;
+    ctx.fillStyle = "white";
+    ctx.font = "24px Arial";
+    ctx.fillText(message, 150, 380);
+    setTimeout(showMenu, 1500);
+}
+</script>
+</body>
+</html>
